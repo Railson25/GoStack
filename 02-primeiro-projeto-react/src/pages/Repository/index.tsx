@@ -1,7 +1,8 @@
-import React from 'react'
+import React, { useEffect, useState } from 'react'
 import {useRouteMatch, Link} from 'react-router-dom'
 import {FiChevronLeft, FiChevronRight} from 'react-icons/fi'
 
+import api from '../../services/api'
 import logoImg from '../../assets/logo.svg'
 import {Header, RepositoryInfo, Issues} from './styles'
 
@@ -9,8 +10,55 @@ interface RepositoryParams {
     repository: string
 }
 
+interface Repository {
+    full_name: string
+    description: string
+    stargazers_count: number
+    forks_count: number
+    open_issues_count: number
+    owner: {
+        login: string
+        avatar_url: string
+    }
+}
+
+interface Issue {
+    id: number
+    title: string
+    html_url:string
+    user: {
+        login:string
+    }
+}
+
 const Repository: React.FC = () => {
+    const [repository, setRepository] = useState<Repository | null>(null)
+    const [issues, setIssues] = useState<Issue[]>([])
+    
     const { params } = useRouteMatch<RepositoryParams>()
+
+    useEffect(() => {
+
+        //Ao utilizar o .then as res já serão executadas juntas/ao mesmo tempo 
+        api.get(`repos/${params.repository}`).then(response => {
+            setRepository(response.data)
+        })
+
+        api.get(`repos/${params.repository}/issues`).then(response => {
+            setIssues(response.data)
+         })
+        // O promisse.all executa duas req ao mesmo tempo/juntas a api quando amabas forem independente entre si.
+        // async function loadData(): Promise<void>{
+        //     const [repository, issues] = await Promise.all([
+        //         api.get(`repos/${params.repository}`),
+        //         api.get(`repos/${params.repository}/issues`),
+        //     ])
+        //     console.log(repository)
+        //     console.log(issues)
+        // }
+
+        // loadData()
+    }, [params.repository])
 
     return (
         <>
@@ -22,39 +70,43 @@ const Repository: React.FC = () => {
                 </Link>
             </Header>
 
-            <RepositoryInfo>
+            {repository && (
+                <RepositoryInfo>
                 <header>
-                    <img src="https://avatars.githubusercontent.com/u/47870113?s=460&u=02b73fc747977be6c65fdfc9799f55c45d8eae5d&v=4" 
-                        alt="Railson Santiago"/>
+                    <img src={repository.owner.avatar_url}
+                        alt={repository.owner.login} />
                     <div>
-                        <strong>Railson25/GoStack</strong>
-                        <p>Descrição do repositório</p>
+                        <strong>{repository.full_name}</strong>
+                        <p>{repository.description}</p>
                     </div>    
                 </header>
                 <ul>
                     <li>
-                        <strong>1808</strong>
+                        <strong>{repository.stargazers_count}</strong>
                         <span>Stars</span>
                     </li>
                     <li>
-                        <strong>48</strong>
+                        <strong>{repository.forks_count}</strong>
                         <span>Forks</span>
                     </li>
                     <li>
-                        <strong>67</strong>
+                        <strong>{repository.open_issues_count}</strong>
                         <span>Issues abertas</span>
                     </li>
                 </ul>
             </RepositoryInfo>
+            )}
 
             <Issues>
-                <Link  to='DERFH'>
-                    <div>
-                        <strong>dfgh</strong>
-                        <p>fdgjdfg</p>
-                    </div>
-                    <FiChevronRight size={20} />
-                </Link>
+                {issues.map(issue => (
+                    <a  key={issue.id} href={issue.html_url}>
+                        <div>
+                            <strong>{issue.title}</strong>
+                            <p>{issue.user.login}</p>
+                        </div>
+                        <FiChevronRight size={20} />
+                    </a>
+                ))}
             </Issues>
         </>
     )
